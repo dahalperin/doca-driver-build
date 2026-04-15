@@ -43,17 +43,45 @@ type Config struct {
 
 	DtkOcpDriverBuild             bool   `env:"DTK_OCP_DRIVER_BUILD"`
 	DtkOcpNicSharedDir            string `env:"DTK_OCP_NIC_SHARED_DIR"            envDefault:"/mnt/shared-nvidia-nic-driver-toolkit"`
+	DtkOcpCompiledDriverVer       string `env:"DTK_OCP_COMPILED_DRIVER_VER"`
+	DtkOcpStartCompileFlag        string `env:"DTK_OCP_START_COMPILE_FLAG"`
+	DtkOcpDoneCompileFlag         string `env:"DTK_OCP_DONE_COMPILE_FLAG"`
+	AppendDriverBuildFlags        string `env:"APPEND_DRIVER_BUILD_FLAGS"`
 	NvidiaNicDriversInventoryPath string `env:"NVIDIA_NIC_DRIVERS_INVENTORY_PATH"`
 
 	OfedBlacklistModulesFile string   `env:"OFED_BLACKLIST_MODULES_FILE" envDefault:"/host/etc/modprobe.d/blacklist-ofed-modules.conf"`
 	OfedBlacklistModules     []string `env:"OFED_BLACKLIST_MODULES"      envDefault:"mlx5_core:mlx5_ib:ib_umad:ib_uverbs:ib_ipoib:rdma_cm:rdma_ucm:ib_core:ib_cm" envSeparator:":"`
 	StorageModules           []string `env:"STORAGE_MODULES"             envDefault:"ib_isert:nvme_rdma:nvmet_rdma:rpcrdma:xprtrdma:ib_srpt"                      envSeparator:":"`
 
+	// DKMS settings
+	UseDKMS bool `env:"USE_DKMS" envDefault:"false"`
+	// UnloadThirdPartyRdmaModules enables blacklisting and unloading of all known
+	// third-party RDMA kernel modules (from rdma-core) before OFED driver reload.
+	// When true, modules from ThirdPartyRDMAModules are:
+	//   1. Added to the modprobe blacklist file (prevents auto-reload by the kernel)
+	//   2. Injected into openibd's UNLOAD_MODULES list (unloaded during driver restart)
+	//
+	// Example: UNLOAD_THIRD_PARTY_RDMA_MODULES=true
+	UnloadThirdPartyRdmaModules bool `env:"UNLOAD_THIRD_PARTY_RDMA_MODULES"`
+
 	// debug settings
 	EntrypointDebug     bool   `env:"ENTRYPOINT_DEBUG"`
 	DebugLogFile        string `env:"DEBUG_LOG_FILE"          envDefault:"/tmp/entrypoint_debug_cmds.log"`
 	DebugSleepSecOnExit int    `env:"DEBUG_SLEEP_SEC_ON_EXIT" envDefault:"300"`
 	BindDelaySec        int    `env:"BIND_DELAY_SEC"          envDefault:"4"`
+}
+
+// ThirdPartyRDMAModules is the hardcoded list of known third-party RDMA kernel modules
+// (non-NVIDIA modules from the rdma-core ecosystem) that can block MOFED driver reload.
+// This list is used when UnloadThirdPartyRdmaModules is true.
+//
+// NOTE: Do NOT add core RDMA infrastructure modules (iw_cm, ib_cm, rdma_cm, etc.)
+// here — MOFED manages those in its own unload sequence. Do NOT add storage-over-RDMA
+// modules that are already handled by UNLOAD_STORAGE_MODULES (StorageModules).
+var ThirdPartyRDMAModules = []string{
+	"bnxt_re", "efa", "erdma", "iw_cxgb4", "hfi1", "hns_roce",
+	"ionic_rdma", "irdma", "ib_qib", "mana_ib", "ocrdma", "qedr",
+	"rdma_rxe", "siw", "vmw_pvrdma",
 }
 
 // GetConfig parses environment variables and returns a Config struct.

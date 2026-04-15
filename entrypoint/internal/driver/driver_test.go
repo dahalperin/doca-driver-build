@@ -577,6 +577,68 @@ var _ = Describe("Driver", func() {
 		})
 	})
 
+	Context("getBuildFlagsForOS", func() {
+		BeforeEach(func() {
+			dm = New(constants.DriverContainerModeSources, cfg, cmdMock, hostMock, osMock).(*driverMgr)
+		})
+
+		It("should include --without-dkms for Ubuntu when UseDKMS is false", func() {
+			cfg.UseDKMS = false
+			dm = New(constants.DriverContainerModeSources, cfg, cmdMock, hostMock, osMock).(*driverMgr)
+
+			flags := dm.getBuildFlagsForOS(constants.OSTypeUbuntu, "5.4.0-42-generic")
+			Expect(flags).To(ContainElement("--without-dkms"))
+			Expect(flags).To(ContainElement("--disable-kmp"))
+		})
+
+		It("should exclude --without-dkms for Ubuntu when UseDKMS is true", func() {
+			cfg.UseDKMS = true
+			dm = New(constants.DriverContainerModeSources, cfg, cmdMock, hostMock, osMock).(*driverMgr)
+
+			flags := dm.getBuildFlagsForOS(constants.OSTypeUbuntu, "5.4.0-42-generic")
+			Expect(flags).NotTo(ContainElement("--without-dkms"))
+			Expect(flags).To(ContainElement("--disable-kmp"))
+		})
+
+		It("should include --without-dkms for SLES when UseDKMS is false", func() {
+			cfg.UseDKMS = false
+			dm = New(constants.DriverContainerModeSources, cfg, cmdMock, hostMock, osMock).(*driverMgr)
+
+			flags := dm.getBuildFlagsForOS(constants.OSTypeSLES, "5.4.0-42-default")
+			Expect(flags).To(ContainElement("--without-dkms"))
+			Expect(flags).To(ContainElement("--disable-kmp"))
+			Expect(flags).To(ContainElement("--kernel-sources"))
+		})
+
+		It("should exclude --without-dkms for SLES when UseDKMS is true", func() {
+			cfg.UseDKMS = true
+			dm = New(constants.DriverContainerModeSources, cfg, cmdMock, hostMock, osMock).(*driverMgr)
+
+			flags := dm.getBuildFlagsForOS(constants.OSTypeSLES, "5.4.0-42-default")
+			Expect(flags).NotTo(ContainElement("--without-dkms"))
+			Expect(flags).To(ContainElement("--disable-kmp"))
+			Expect(flags).To(ContainElement("--kernel-sources"))
+		})
+
+		It("should include --without-dkms for RedHat when UseDKMS is false", func() {
+			cfg.UseDKMS = false
+			dm = New(constants.DriverContainerModeSources, cfg, cmdMock, hostMock, osMock).(*driverMgr)
+
+			flags := dm.getBuildFlagsForOS(constants.OSTypeRedHat, "5.4.0-42")
+			Expect(flags).To(ContainElement("--without-dkms"))
+			Expect(flags).To(ContainElement("--disable-kmp"))
+		})
+
+		It("should exclude --without-dkms for RedHat when UseDKMS is true", func() {
+			cfg.UseDKMS = true
+			dm = New(constants.DriverContainerModeSources, cfg, cmdMock, hostMock, osMock).(*driverMgr)
+
+			flags := dm.getBuildFlagsForOS(constants.OSTypeRedHat, "5.4.0-42")
+			Expect(flags).NotTo(ContainElement("--without-dkms"))
+			Expect(flags).To(ContainElement("--disable-kmp"))
+		})
+	})
+
 	Context("getAppendDriverBuildFlags", func() {
 		BeforeEach(func() {
 			dm = New(constants.DriverContainerModeSources, cfg, cmdMock, hostMock, osMock).(*driverMgr)
@@ -644,6 +706,9 @@ var _ = Describe("Driver", func() {
 			// Mock setupEUSRepositories - EUS is available for 8.4
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "config-manager", "--set-enabled", "rhel-8-for-x86_64-baseos-eus-rpms").Return("", "", nil)
 
+			// Mock build directory check - not present, so kernel packages will be installed
+			osMock.EXPECT().Stat("/lib/modules/5.4.0-42/build").Return(nil, os.ErrNotExist)
+
 			// Mock getArchitecture call for kernel packages
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
 
@@ -684,6 +749,9 @@ var _ = Describe("Driver", func() {
 			// Mock setupEUSRepositories - EUS is available for 8.4
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "config-manager", "--set-enabled", "rhel-8-for-x86_64-baseos-eus-rpms").Return("", "", nil)
 
+			// Mock build directory check - not present, so kernel packages will be installed
+			osMock.EXPECT().Stat("/lib/modules/5.4.0-42/build").Return(nil, os.ErrNotExist)
+
 			// Mock getArchitecture call for kernel packages
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
 
@@ -717,6 +785,9 @@ var _ = Describe("Driver", func() {
 			// Mock setupEUSRepositories - EUS is available for 8.4
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "config-manager", "--set-enabled", "rhel-8-for-x86_64-baseos-eus-rpms").Return("", "", nil)
 
+			// Mock build directory check - not present, so kernel packages will be installed
+			osMock.EXPECT().Stat("/lib/modules/5.4.0-42.rt7.313.x86_64/build").Return(nil, os.ErrNotExist)
+
 			// Mock getArchitecture call for kernel packages
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
 
@@ -748,6 +819,9 @@ var _ = Describe("Driver", func() {
 
 			// Mock setupEUSRepositories - EUS is available for 8.4
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "config-manager", "--set-enabled", "rhel-8-for-x86_64-baseos-eus-rpms").Return("", "", nil)
+
+			// Mock build directory check - not present, so kernel packages will be installed
+			osMock.EXPECT().Stat("/lib/modules/5.4.0-42.64k.x86_64/build").Return(nil, os.ErrNotExist)
 
 			// Mock getArchitecture call for kernel packages
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
@@ -790,6 +864,9 @@ var _ = Describe("Driver", func() {
 			// Mock setupEUSRepositories - EUS is available for 8.4
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "config-manager", "--set-enabled", "rhel-8-for-x86_64-baseos-eus-rpms").Return("", "", nil)
 
+			// Mock build directory check - not present, so kernel packages will be installed
+			osMock.EXPECT().Stat("/lib/modules/5.4.0-42/build").Return(nil, os.ErrNotExist)
+
 			// Mock getArchitecture call for kernel packages
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
 
@@ -816,6 +893,9 @@ var _ = Describe("Driver", func() {
 
 			// Mock setupEUSRepositories - EUS is available for 8.4
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "config-manager", "--set-enabled", "rhel-8-for-x86_64-baseos-eus-rpms").Return("", "", nil)
+
+			// Mock build directory check - not present, so kernel packages will be installed
+			osMock.EXPECT().Stat("/lib/modules/5.4.0-42/build").Return(nil, os.ErrNotExist)
 
 			// Mock getArchitecture call for kernel packages
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
@@ -872,6 +952,10 @@ var _ = Describe("Driver", func() {
 			hostMock.EXPECT().GetKernelVersion(ctx).Return("5.4.0-42-generic", nil)
 			hostMock.EXPECT().GetOSType(ctx).Return(constants.OSTypeUbuntu, nil)
 
+			// Mock installUbuntuPrerequisites (now runs before cache check)
+			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "update").Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "-yq", "install", "pkg-config", "linux-headers-5.4.0-42-generic").Return("", "", nil)
+
 			// Set inventory path to trigger the error path
 			dm.cfg.NvidiaNicDriversInventoryPath = "/test/inventory"
 			osMock.EXPECT().Stat("/test/inventory/5.4.0-42-generic/test-version").Return(nil, errors.New("stat error"))
@@ -890,6 +974,10 @@ var _ = Describe("Driver", func() {
 
 			hostMock.EXPECT().GetKernelVersion(ctx).Return("5.4.0-42-generic", nil)
 			hostMock.EXPECT().GetOSType(ctx).Return(constants.OSTypeUbuntu, nil)
+
+			// Mock installUbuntuPrerequisites (now runs before cache check)
+			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "update").Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "-yq", "install", "pkg-config", "linux-headers-5.4.0-42-generic").Return("", "", nil)
 
 			// Mock checkDriverInventory to return false (skip build) - checksums match
 			osMock.EXPECT().Stat(filepath.Join(inventoryDir, "5.4.0-42-generic", "test-version")).Return(nil, nil)          // inventory directory exists
@@ -930,21 +1018,20 @@ var _ = Describe("Driver", func() {
 			hostMock.EXPECT().GetOSType(ctx).Return(constants.OSTypeUbuntu, nil)
 
 			// Mock checkDriverInventory to return true (build needed) - no inventory path set
-			// This will cause checkDriverInventory to return true
-
-			// Mock createInventoryDirectory
 			cmdMock.EXPECT().RunCommand(ctx, "mkdir", "-p", mock.Anything).Return("", "", nil)
 
 			// Mock installUbuntuPrerequisites
 			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "update").Return("", "", nil)
 			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "-yq", "install", "pkg-config", "linux-headers-5.4.0-42-generic").Return("", "", nil)
 
-			// Mock buildDriverFromSource - need to mock the actual install.pl command with all arguments
+			// UseDKMS false by default → install.pl must include --without-dkms
 			cmdMock.EXPECT().RunCommand(ctx, "/test/driver/path/install.pl",
 				"--without-depcheck", "--kernel", "5.4.0-42-generic", "--kernel-only", "--build-only",
 				"--with-mlnx-tools", "--without-knem-modules", "--without-iser-modules",
 				"--without-isert-modules", "--without-srp-modules", "--without-kernel-mft-modules",
-				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms", "--without-mlnx-nfsrdma-modules",
+				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms",
+				"--without-xpmem", "--without-xpmem-modules",
+				"--without-mlnx-nfsrdma-modules",
 				"--without-mlnx-nvme-modules").Return("", "", nil)
 
 			// Mock copyBuildArtifacts - debug logging and copy
@@ -955,6 +1042,64 @@ var _ = Describe("Driver", func() {
 			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil) // cp command
 
 			// Note: storeBuildChecksum is not called when NvidiaNicDriversInventoryPath is empty
+
+			// Mock fixSourceLink
+			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
+			osMock.EXPECT().Readlink(mock.Anything).Return("", errors.New("not found"))
+
+			// Mock installDriver - check if kernel modules directory exists
+			osMock.EXPECT().Stat("/lib/modules/5.4.0-42-generic").Return(nil, os.ErrNotExist)
+			// Mock creating kernel modules directory
+			cmdMock.EXPECT().RunCommand(ctx, "mkdir", "-p", "/lib/modules/5.4.0-42-generic").Return("", "", nil)
+			// Mock creating modules.order and modules.builtin files
+			cmdMock.EXPECT().RunCommand(ctx, "touch", "/lib/modules/5.4.0-42-generic/modules.order").Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "touch", "/lib/modules/5.4.0-42-generic/modules.builtin").Return("", "", nil)
+			// Mock Ubuntu driver installation
+			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "update").Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.MatchedBy(func(cmd string) bool {
+				return strings.Contains(cmd, "apt-get install -y") && strings.Contains(cmd, "*.deb")
+			})).Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "depmod", "5.4.0-42-generic").Return("", "", nil)
+
+			// Mock ubuntuSyncNetworkConfigurationTools
+			osMock.EXPECT().Stat("/etc/network/interfaces").Return(nil, os.ErrNotExist)
+			osMock.EXPECT().Stat("/sbin/ifup").Return(nil, os.ErrNotExist)
+
+			err := dm.Build(ctx)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should build driver successfully for Ubuntu with DKMS enabled", func() {
+			cfg.UseDKMS = true
+			dm = New(constants.DriverContainerModeSources, cfg, cmdMock, hostMock, osMock).(*driverMgr)
+
+			hostMock.EXPECT().GetKernelVersion(ctx).Return("5.4.0-42-generic", nil)
+			hostMock.EXPECT().GetOSType(ctx).Return(constants.OSTypeUbuntu, nil)
+
+			// Mock checkDriverInventory to return true (build needed) - no inventory path set
+			cmdMock.EXPECT().RunCommand(ctx, "mkdir", "-p", mock.Anything).Return("", "", nil)
+
+			// Mock installUbuntuPrerequisites
+			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "update").Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "-yq", "install", "pkg-config", "linux-headers-5.4.0-42-generic").Return("", "", nil)
+
+			// UseDKMS true → install.pl must NOT include --without-dkms
+			cmdMock.EXPECT().RunCommand(ctx, "/test/driver/path/install.pl",
+				"--without-depcheck", "--kernel", "5.4.0-42-generic", "--kernel-only", "--build-only",
+				"--with-mlnx-tools", "--without-knem-modules", "--without-iser-modules",
+				"--without-isert-modules", "--without-srp-modules", "--without-kernel-mft-modules",
+				"--without-mlnx-rdma-rxe-modules", "--disable-kmp",
+				"--without-xpmem", "--without-xpmem-modules", "--without-xpmem-dkms",
+				"--without-mlnx-nfsrdma-modules",
+				"--without-mlnx-nvme-modules").Return("", "", nil)
+
+			// Mock copyBuildArtifacts - debug logging and copy
+			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil) // ls -la source directory
+			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil) // find .deb files
+			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil) // ls -la destination directory
+			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil) // cp command
 
 			// Mock fixSourceLink
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
@@ -1003,7 +1148,8 @@ var _ = Describe("Driver", func() {
 				"--without-isert", "--without-srp", "--without-kernel-mft",
 				"--without-mlnx-rdma-rxe",
 				"--disable-kmp", "--without-dkms", "--kernel-sources",
-				"/lib/modules/5.4.0-42-default/build", "--without-xpmem", "--without-xpmem-modules",
+				"/lib/modules/5.4.0-42-default/build",
+				"--without-xpmem", "--without-xpmem-modules",
 				"--without-mlnx-nfsrdma", "--without-mlnx-nvme").Return("", "", nil)
 
 			// Mock copyBuildArtifacts - debug logging and copy
@@ -1053,6 +1199,7 @@ var _ = Describe("Driver", func() {
 			hostMock.EXPECT().GetRedHatVersionInfo(ctx).Return(versionInfo, nil)
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "config-manager", "--set-enabled", "rhel-8-for-x86_64-baseos-eus-rpms").Return("", "", nil)
+			osMock.EXPECT().Stat("/lib/modules/5.4.0-42/build").Return(nil, os.ErrNotExist)
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "-q", "-y", "--releasever=8.4", "install", "kernel-5.4.0-42").Return("", "", nil)
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "-q", "-y", "--releasever=8.4", "install", "kernel-headers-5.4.0-42").Return("", "", nil)
@@ -1067,7 +1214,9 @@ var _ = Describe("Driver", func() {
 				"--without-depcheck", "--kernel", "5.4.0-42", "--kernel-only", "--build-only",
 				"--with-mlnx-tools", "--without-knem", "--without-iser",
 				"--without-isert", "--without-srp", "--without-kernel-mft",
-				"--without-mlnx-rdma-rxe", "--disable-kmp", "--without-dkms", "--without-mlnx-nfsrdma",
+				"--without-mlnx-rdma-rxe", "--disable-kmp", "--without-dkms",
+				"--without-xpmem", "--without-xpmem-modules",
+				"--without-mlnx-nfsrdma",
 				"--without-mlnx-nvme").Return("", "", nil)
 
 			// Mock copyBuildArtifacts - debug logging and copy
@@ -1120,6 +1269,7 @@ var _ = Describe("Driver", func() {
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "makecache", "--releasever=8.4").Return("", "", nil)
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "config-manager", "--set-enabled", "rhel-8-for-x86_64-baseos-eus-rpms").Return("", "", nil)
+			osMock.EXPECT().Stat("/lib/modules/5.4.0-42/build").Return(nil, os.ErrNotExist)
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "-q", "-y", "--releasever=8.4", "install", "kernel-5.4.0-42").Return("", "", nil)
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "-q", "-y", "--releasever=8.4", "install", "kernel-headers-5.4.0-42").Return("", "", nil)
 			cmdMock.EXPECT().RunCommand(ctx, "dnf", "-q", "-y", "--releasever=8.4", "install", "kernel-core-5.4.0-42").Return("", "", nil)
@@ -1133,7 +1283,9 @@ var _ = Describe("Driver", func() {
 				"--without-depcheck", "--kernel", "5.4.0-42", "--kernel-only", "--build-only",
 				"--with-mlnx-tools", "--without-knem", "--without-iser",
 				"--without-isert", "--without-srp", "--without-kernel-mft",
-				"--without-mlnx-rdma-rxe", "--without-mlnx-nfsrdma",
+				"--without-mlnx-rdma-rxe",
+				"--without-xpmem", "--without-xpmem-modules",
+				"--without-mlnx-nfsrdma",
 				"--without-mlnx-nvme").Return("", "", nil)
 
 			// Mock copyBuildArtifacts - debug logging and copy
@@ -1168,8 +1320,9 @@ var _ = Describe("Driver", func() {
 			hostMock.EXPECT().GetKernelVersion(ctx).Return("5.4.0-42-generic", nil)
 			hostMock.EXPECT().GetOSType(ctx).Return(constants.OSTypeUbuntu, nil)
 
-			// Mock checkDriverInventory to return true (build needed)
-			hostMock.EXPECT().GetOSType(ctx).Return(constants.OSTypeUbuntu, nil)
+			// Mock installUbuntuPrerequisites (now runs before cache check)
+			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "update").Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "-yq", "install", "pkg-config", "linux-headers-5.4.0-42-generic").Return("", "", nil)
 
 			// Mock createInventoryDirectory failure
 			expectedError := errors.New("mkdir failed")
@@ -1184,13 +1337,7 @@ var _ = Describe("Driver", func() {
 			hostMock.EXPECT().GetKernelVersion(ctx).Return("5.4.0-42-generic", nil)
 			hostMock.EXPECT().GetOSType(ctx).Return(constants.OSTypeUbuntu, nil)
 
-			// Mock checkDriverInventory to return true (build needed)
-			hostMock.EXPECT().GetOSType(ctx).Return(constants.OSTypeUbuntu, nil)
-
-			// Mock createInventoryDirectory
-			cmdMock.EXPECT().RunCommand(ctx, "mkdir", "-p", mock.Anything).Return("", "", nil)
-
-			// Mock installUbuntuPrerequisites failure
+			// Mock installUbuntuPrerequisites failure (now runs before cache check)
 			expectedError := errors.New("apt update failed")
 			cmdMock.EXPECT().RunCommand(ctx, "apt-get", "update").Return("", "", expectedError)
 
@@ -1219,7 +1366,9 @@ var _ = Describe("Driver", func() {
 				"--without-depcheck", "--kernel", "5.4.0-42-generic", "--kernel-only", "--build-only",
 				"--with-mlnx-tools", "--without-knem-modules", "--without-iser-modules",
 				"--without-isert-modules", "--without-srp-modules", "--without-kernel-mft-modules",
-				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms", "--without-mlnx-nfsrdma-modules",
+				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms",
+				"--without-xpmem", "--without-xpmem-modules",
+				"--without-mlnx-nfsrdma-modules",
 				"--without-mlnx-nvme-modules").Return("", "", expectedError)
 
 			err := dm.Build(ctx)
@@ -1252,7 +1401,9 @@ var _ = Describe("Driver", func() {
 				"--without-depcheck", "--kernel", "5.4.0-42-generic", "--kernel-only", "--build-only",
 				"--with-mlnx-tools", "--without-knem-modules", "--without-iser-modules",
 				"--without-isert-modules", "--without-srp-modules", "--without-kernel-mft-modules",
-				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms", "--without-mlnx-nfsrdma-modules",
+				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms",
+				"--without-xpmem", "--without-xpmem-modules",
+				"--without-mlnx-nfsrdma-modules",
 				"--without-mlnx-nvme-modules").Return("", "", nil)
 
 			// Mock copyBuildArtifacts failure - debug logging and copy failure
@@ -1301,18 +1452,27 @@ var _ = Describe("Driver", func() {
 				"--without-depcheck", "--kernel", "5.4.0-42-generic", "--kernel-only", "--build-only",
 				"--with-mlnx-tools", "--without-knem-modules", "--without-iser-modules",
 				"--without-isert-modules", "--without-srp-modules", "--without-kernel-mft-modules",
-				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms", "--without-mlnx-nfsrdma-modules",
+				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms",
+				"--without-xpmem", "--without-xpmem-modules",
+				"--without-mlnx-nfsrdma-modules",
 				"--without-mlnx-nvme-modules").Return("", "", nil)
 
 			// Mock copyBuildArtifacts - debug logging and copy
 			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
-			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil) // ls -la source directory
-			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil) // find .deb files
-			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil) // ls -la destination directory
-			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil) // cp command
+			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("", "", nil).Times(4)
+
+			// Mock fixSourceLink
+			cmdMock.EXPECT().RunCommand(ctx, "uname", "-m").Return("x86_64", "", nil)
+			osMock.EXPECT().Readlink(mock.Anything).Return("/usr/src/ofa_kernel/x86_64/5.4.0-42-generic", nil)
 
 			// Mock storeBuildChecksum - return valid checksum
-			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.Anything).Return("abc123def456", "", nil)
+			// Use a more specific matcher for the command to avoid matching other sh -c calls
+			cmdMock.EXPECT().RunCommand(ctx, "sh", "-c", mock.MatchedBy(func(cmd string) bool {
+				return strings.Contains(cmd, "md5sum")
+			})).Return("abc123def456", "", nil)
+
+			// Mock WriteFile failure
+			osMock.EXPECT().WriteFile(mock.Anything, mock.Anything, os.FileMode(0o644)).Return(errors.New("write failed"))
 
 			err := dm.Build(ctx)
 			Expect(err).To(HaveOccurred())
@@ -1338,7 +1498,9 @@ var _ = Describe("Driver", func() {
 				"--without-depcheck", "--kernel", "5.4.0-42-generic", "--kernel-only", "--build-only",
 				"--with-mlnx-tools", "--without-knem-modules", "--without-iser-modules",
 				"--without-isert-modules", "--without-srp-modules", "--without-kernel-mft-modules",
-				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms", "--without-mlnx-nfsrdma-modules",
+				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms",
+				"--without-xpmem", "--without-xpmem-modules",
+				"--without-mlnx-nfsrdma-modules",
 				"--without-mlnx-nvme-modules").Return("", "", nil)
 
 			// Mock copyBuildArtifacts - debug logging and copy
@@ -1382,11 +1544,8 @@ var _ = Describe("Driver", func() {
 			hostMock.EXPECT().GetKernelVersion(ctx).Return("5.4.0-42-generic", nil)
 			hostMock.EXPECT().GetOSType(ctx).Return("unsupported", nil)
 
-			// Mock checkDriverInventory to return true (build needed) - no inventory path set
-			// This will cause checkDriverInventory to return true
-
-			// Mock createInventoryDirectory
-			cmdMock.EXPECT().RunCommand(ctx, "mkdir", "-p", mock.Anything).Return("", "", nil)
+			// installPrerequisitesForOS now runs before cache check and fails immediately
+			// for unsupported OS types — no mkdir mock needed
 
 			err := dm.Build(ctx)
 			Expect(err).To(HaveOccurred())
@@ -1416,7 +1575,9 @@ var _ = Describe("Driver", func() {
 				"--without-depcheck", "--kernel", "5.4.0-42-generic", "--kernel-only", "--build-only",
 				"--with-mlnx-tools", "--without-knem-modules", "--without-iser-modules",
 				"--without-isert-modules", "--without-srp-modules", "--without-kernel-mft-modules",
-				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms", "--without-mlnx-nfsrdma-modules",
+				"--without-mlnx-rdma-rxe-modules", "--disable-kmp", "--without-dkms",
+				"--without-xpmem", "--without-xpmem-modules",
+				"--without-mlnx-nfsrdma-modules",
 				"--without-mlnx-nvme-modules").Return("", "", nil)
 
 			// Mock copyBuildArtifacts - debug logging and copy
@@ -1471,6 +1632,132 @@ var _ = Describe("Driver", func() {
 		})
 
 		It("should return true when modules match and no restart is needed", func() {
+			// Mock checkLoadedKmodSrcverVsModinfo to return true (modules match)
+			hostMock.EXPECT().LsMod(ctx).Return(map[string]host.LoadedModule{
+				"mlx5_core": {Name: "mlx5_core", RefCount: 1, UsedBy: []string{}},
+				"mlx5_ib":   {Name: "mlx5_ib", RefCount: 1, UsedBy: []string{}},
+				"ib_core":   {Name: "ib_core", RefCount: 1, UsedBy: []string{}},
+			}, nil)
+
+			// Mock modinfo calls for each module
+			cmdMock.EXPECT().RunCommand(ctx, "modinfo", "mlx5_core").Return("srcversion: ABC123", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "cat", "/sys/module/mlx5_core/srcversion").Return("ABC123", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "modinfo", "mlx5_ib").Return("srcversion: DEF456", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "cat", "/sys/module/mlx5_ib/srcversion").Return("DEF456", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "modinfo", "ib_core").Return("srcversion: GHI789", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "cat", "/sys/module/ib_core/srcversion").Return("GHI789", "", nil)
+
+			// Mock printLoadedDriverVersion
+			hostMock.EXPECT().LsMod(ctx).Return(map[string]host.LoadedModule{
+				"mlx5_core": {Name: "mlx5_core", RefCount: 1, UsedBy: []string{}},
+			}, nil)
+			cmdMock.EXPECT().RunCommand(ctx, "ls", "/sys/class/net/").Return("eth0 eth1", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "readlink", "/sys/class/net/eth0/device/driver").Return("../../../../bus/pci/drivers/mlx5_core", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "ethtool", "--driver", "eth0").Return("version: 5.0-1.0.0", "", nil)
+
+			// Mock mountRootfs (mount already exists scenario)
+			cmdMock.EXPECT().RunCommand(ctx, "mount", "--make-runbindable", "/sys").Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "mount", "--make-private", "/sys").Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "mount", "-l").Return("/usr/src/ on /run/mellanox/drivers/usr/src/ type none", "", nil)
+
+			result, err := dm.Load(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
+			Expect(dm.newDriverLoaded).To(BeFalse())
+		})
+
+		It("should setup DKMS when UseDKMS is enabled and modules match", func() {
+			cfg.UseDKMS = true
+			dm = &driverMgr{
+				cfg:  cfg,
+				cmd:  cmdMock,
+				host: hostMock,
+				os:   osMock,
+			}
+
+			// Mock generateOfedModulesBlacklist (always called at start of Load)
+			blacklistFile, err := os.CreateTemp(tempDir, "blacklist")
+			Expect(err).NotTo(HaveOccurred())
+			osMock.EXPECT().Create(cfg.OfedBlacklistModulesFile).Return(blacklistFile, nil)
+			// Mock removeOfedModulesBlacklist (deferred cleanup)
+			osMock.EXPECT().Stat(cfg.OfedBlacklistModulesFile).Return(nil, nil)
+			osMock.EXPECT().RemoveAll(cfg.OfedBlacklistModulesFile).Return(nil)
+
+			// Mock DKMS setup (called before module check in Load when UseDKMS is true)
+			hostMock.EXPECT().GetKernelVersion(ctx).Return("5.4.0-42-generic", nil)
+			// Mock discoverDKMSModule - ReadDir /usr/src/
+			mockEntry := mockDirEntry{name: "mlnx-ofa_kernel-5.9-5.9.0.0.1.1.0", isDir: true}
+			osMock.EXPECT().ReadDir("/usr/src/").Return([]os.DirEntry{mockEntry}, nil)
+			// Mock Stat dkms.conf
+			osMock.EXPECT().Stat("/usr/src/mlnx-ofa_kernel-5.9-5.9.0.0.1.1.0/dkms.conf").Return(nil, nil)
+			// Mock ReadFile dkms.conf
+			osMock.EXPECT().ReadFile("/usr/src/mlnx-ofa_kernel-5.9-5.9.0.0.1.1.0/dkms.conf").Return([]byte("PACKAGE_NAME=\"mlnx-ofa_kernel\"\nPACKAGE_VERSION=\"5.9.0.0.1.1.0\"\n"), nil)
+			// Mock dkmsStatus - already installed
+			cmdMock.EXPECT().RunCommand(ctx, "dkms", "status", "mlnx-ofa_kernel", "5.9.0.0.1.1.0").Return("mlnx-ofa_kernel/5.9.0.0.1.1.0, 5.4.0-42-generic: installed", "", nil)
+
+			// Mock checkLoadedKmodSrcverVsModinfo to return true (modules match)
+			hostMock.EXPECT().LsMod(ctx).Return(map[string]host.LoadedModule{
+				"mlx5_core": {Name: "mlx5_core", RefCount: 1, UsedBy: []string{}},
+				"mlx5_ib":   {Name: "mlx5_ib", RefCount: 1, UsedBy: []string{}},
+				"ib_core":   {Name: "ib_core", RefCount: 1, UsedBy: []string{}},
+			}, nil)
+
+			// Mock modinfo calls for each module
+			cmdMock.EXPECT().RunCommand(ctx, "modinfo", "mlx5_core").Return("srcversion: ABC123", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "cat", "/sys/module/mlx5_core/srcversion").Return("ABC123", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "modinfo", "mlx5_ib").Return("srcversion: DEF456", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "cat", "/sys/module/mlx5_ib/srcversion").Return("DEF456", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "modinfo", "ib_core").Return("srcversion: GHI789", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "cat", "/sys/module/ib_core/srcversion").Return("GHI789", "", nil)
+
+			// Mock printLoadedDriverVersion
+			hostMock.EXPECT().LsMod(ctx).Return(map[string]host.LoadedModule{
+				"mlx5_core": {Name: "mlx5_core", RefCount: 1, UsedBy: []string{}},
+			}, nil)
+			cmdMock.EXPECT().RunCommand(ctx, "ls", "/sys/class/net/").Return("eth0 eth1", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "readlink", "/sys/class/net/eth0/device/driver").Return("../../../../bus/pci/drivers/mlx5_core", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "ethtool", "--driver", "eth0").Return("version: 5.0-1.0.0", "", nil)
+
+			// Mock mountRootfs (mount already exists scenario)
+			cmdMock.EXPECT().RunCommand(ctx, "mount", "--make-runbindable", "/sys").Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "mount", "--make-private", "/sys").Return("", "", nil)
+			cmdMock.EXPECT().RunCommand(ctx, "mount", "-l").Return("/usr/src/ on /run/mellanox/drivers/usr/src/ type none", "", nil)
+
+			result, err := dm.Load(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
+			Expect(dm.newDriverLoaded).To(BeFalse())
+		})
+
+		It("should setup DKMS when UseDKMS is enabled on RHEL and modules match", func() {
+			cfg.UseDKMS = true
+			dm = &driverMgr{
+				cfg:  cfg,
+				cmd:  cmdMock,
+				host: hostMock,
+				os:   osMock,
+			}
+
+			// Mock generateOfedModulesBlacklist (always called at start of Load)
+			blacklistFile, err := os.CreateTemp(tempDir, "blacklist")
+			Expect(err).NotTo(HaveOccurred())
+			osMock.EXPECT().Create(cfg.OfedBlacklistModulesFile).Return(blacklistFile, nil)
+			// Mock removeOfedModulesBlacklist (deferred cleanup)
+			osMock.EXPECT().Stat(cfg.OfedBlacklistModulesFile).Return(nil, nil)
+			osMock.EXPECT().RemoveAll(cfg.OfedBlacklistModulesFile).Return(nil)
+
+			// Mock DKMS setup with RHEL kernel
+			hostMock.EXPECT().GetKernelVersion(ctx).Return("5.14.0-284.32.1.el9_2.x86_64", nil)
+			// Mock discoverDKMSModule - ReadDir /usr/src/
+			mockEntry := mockDirEntry{name: "mlnx-ofa_kernel-5.9-5.9.0.0.1.1.0", isDir: true}
+			osMock.EXPECT().ReadDir("/usr/src/").Return([]os.DirEntry{mockEntry}, nil)
+			// Mock Stat dkms.conf
+			osMock.EXPECT().Stat("/usr/src/mlnx-ofa_kernel-5.9-5.9.0.0.1.1.0/dkms.conf").Return(nil, nil)
+			// Mock ReadFile dkms.conf
+			osMock.EXPECT().ReadFile("/usr/src/mlnx-ofa_kernel-5.9-5.9.0.0.1.1.0/dkms.conf").Return([]byte("PACKAGE_NAME=\"mlnx-ofa_kernel\"\nPACKAGE_VERSION=\"5.9.0.0.1.1.0\"\n"), nil)
+			// Mock dkmsStatus - already installed
+			cmdMock.EXPECT().RunCommand(ctx, "dkms", "status", "mlnx-ofa_kernel", "5.9.0.0.1.1.0").Return("mlnx-ofa_kernel/5.9.0.0.1.1.0, 5.14.0-284.32.1.el9_2.x86_64: installed", "", nil)
+
 			// Mock checkLoadedKmodSrcverVsModinfo to return true (modules match)
 			hostMock.EXPECT().LsMod(ctx).Return(map[string]host.LoadedModule{
 				"mlx5_core": {Name: "mlx5_core", RefCount: 1, UsedBy: []string{}},
@@ -3453,6 +3740,95 @@ var _ = Describe("Driver OFED Blacklist", func() {
 				}
 			}
 			Expect(blacklistLines).To(Equal(1))
+		})
+
+		It("should include third-party RDMA modules in blacklist when flag is true", func() {
+			blacklistFile := filepath.Join(tempDir, "third-party-rdma-blacklist.conf")
+			cfg := config.Config{
+				OfedBlacklistModulesFile:     blacklistFile,
+				OfedBlacklistModules:         []string{"mlx5_core", "mlx5_ib"},
+				UnloadThirdPartyRdmaModules: true,
+			}
+
+			dm = &driverMgr{
+				cfg:  cfg,
+				cmd:  cmdMock,
+				host: hostMock,
+				os:   wrappers.NewOS(),
+			}
+
+			err := dm.generateOfedModulesBlacklist(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify file exists
+			_, err = os.Stat(blacklistFile)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Read and verify content
+			content, err := os.ReadFile(blacklistFile)
+			Expect(err).ToNot(HaveOccurred())
+
+			contentStr := string(content)
+			Expect(contentStr).To(ContainSubstring("# blacklist ofed-related modules on host to prevent inbox or host OFED driver loading"))
+			Expect(contentStr).To(ContainSubstring("blacklist mlx5_core"))
+			Expect(contentStr).To(ContainSubstring("blacklist mlx5_ib"))
+			Expect(contentStr).To(ContainSubstring("# blacklist third-party RDMA modules to prevent reload conflicts"))
+			// Verify a few representative third-party modules
+			Expect(contentStr).To(ContainSubstring("blacklist bnxt_re"))
+			Expect(contentStr).To(ContainSubstring("blacklist qedr"))
+			Expect(contentStr).To(ContainSubstring("blacklist siw"))
+
+			// Count blacklist lines - should be 2 OFED + len(ThirdPartyRDMAModules)
+			lines := strings.Split(contentStr, "\n")
+			blacklistLines := 0
+			for _, line := range lines {
+				if strings.HasPrefix(strings.TrimSpace(line), "blacklist") {
+					blacklistLines++
+				}
+			}
+			Expect(blacklistLines).To(Equal(2 + len(config.ThirdPartyRDMAModules)))
+		})
+
+		It("should not include third-party RDMA modules section when flag is false", func() {
+			blacklistFile := filepath.Join(tempDir, "no-third-party-rdma-blacklist.conf")
+			cfg := config.Config{
+				OfedBlacklistModulesFile:     blacklistFile,
+				OfedBlacklistModules:         []string{"mlx5_core", "mlx5_ib"},
+				UnloadThirdPartyRdmaModules: false,
+			}
+
+			dm = &driverMgr{
+				cfg:  cfg,
+				cmd:  cmdMock,
+				host: hostMock,
+				os:   wrappers.NewOS(),
+			}
+
+			err := dm.generateOfedModulesBlacklist(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify file exists
+			_, err = os.Stat(blacklistFile)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Read and verify content
+			content, err := os.ReadFile(blacklistFile)
+			Expect(err).ToNot(HaveOccurred())
+
+			contentStr := string(content)
+			Expect(contentStr).To(ContainSubstring("blacklist mlx5_core"))
+			Expect(contentStr).To(ContainSubstring("blacklist mlx5_ib"))
+			Expect(contentStr).NotTo(ContainSubstring("# blacklist third-party RDMA modules to prevent reload conflicts"))
+
+			// Count blacklist lines - should be 2 (only OFED)
+			lines := strings.Split(contentStr, "\n")
+			blacklistLines := 0
+			for _, line := range lines {
+				if strings.HasPrefix(strings.TrimSpace(line), "blacklist") {
+					blacklistLines++
+				}
+			}
+			Expect(blacklistLines).To(Equal(2))
 		})
 	})
 
